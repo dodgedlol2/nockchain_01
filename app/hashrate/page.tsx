@@ -158,20 +158,24 @@ export default function HashratePage() {
         <div className="bg-[#1A1A2E] p-4 rounded-lg border border-gray-700">
           <h3 className="text-sm font-medium text-gray-400 mb-1">Current Hashrate</h3>
           <p className="text-xl font-bold text-white">
-            {data.metadata.currentHashrate >= 1e15 
+            {data.metadata.currentHashrate && data.metadata.currentHashrate >= 1e15 
               ? `${(data.metadata.currentHashrate / 1e15).toFixed(2)} PH/s`
-              : `${(data.metadata.currentHashrate / 1e12).toFixed(2)} TH/s`
+              : data.metadata.currentHashrate && data.metadata.currentHashrate >= 1e12
+              ? `${(data.metadata.currentHashrate / 1e12).toFixed(2)} TH/s`
+              : data.metadata.currentHashrate 
+              ? `${(data.metadata.currentHashrate / 1e9).toFixed(2)} GH/s`
+              : 'Loading...'
             }
           </p>
           <p className="text-xs text-green-400 mt-1">
-            {data.tip.proofsPerSecond.toFixed(2)} proofs/sec
+            {data.tip && data.tip.proofsPerSecond ? data.tip.proofsPerSecond.toFixed(2) : '0'} proofs/sec
           </p>
         </div>
         
         <div className="bg-[#1A1A2E] p-4 rounded-lg border border-gray-700">
           <h3 className="text-sm font-medium text-gray-400 mb-1">Block Height</h3>
           <p className="text-xl font-bold text-white">
-            {data.tip.height.toLocaleString()}
+            {data.tip && data.tip.height ? data.tip.height.toLocaleString() : 'Loading...'}
           </p>
           <p className="text-xs text-blue-400 mt-1">Current tip</p>
         </div>
@@ -195,7 +199,7 @@ export default function HashratePage() {
         <div className="bg-[#1A1A2E] p-4 rounded-lg border border-gray-700">
           <h3 className="text-sm font-medium text-gray-400 mb-1">Data Points</h3>
           <p className="text-xl font-bold text-white">
-            {data.metadata.totalPoints.toLocaleString()}
+            {data.metadata && data.metadata.totalPoints ? data.metadata.totalPoints.toLocaleString() : '0'}
           </p>
           <p className="text-xs text-orange-400 mt-1">Historical samples</p>
         </div>
@@ -236,12 +240,17 @@ export default function HashratePage() {
           <div className="space-y-3 text-gray-400">
             <div className="flex justify-between">
               <span>Difficulty:</span>
-              <span className="text-white font-mono">2^{data.tip.difficulty.toFixed(1)}</span>
+              <span className="text-white font-mono">
+                {data.tip && data.tip.difficulty ? `2^${data.tip.difficulty.toFixed(1)}` : 'Loading...'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Last Block:</span>
               <span className="text-white">
-                {new Date(data.tip.timestamp * 1000).toLocaleString()}
+                {data.tip && data.tip.timestamp 
+                  ? new Date(data.tip.timestamp * 1000).toLocaleString()
+                  : 'Loading...'
+                }
               </span>
             </div>
             <div className="flex justify-between">
