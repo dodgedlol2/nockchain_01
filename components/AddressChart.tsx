@@ -8,7 +8,7 @@ const Plot = dynamic(() => import('react-plotly.js'), {
   loading: () => (
     <div className="flex items-center justify-center h-96">
       <div className="text-center">
-        <div className="w-8 h-8 border-2 border-[#5B6CFF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="w-8 h-8 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-gray-400">Loading chart...</p>
       </div>
     </div>
@@ -147,7 +147,7 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
       const lastDays = getDaysFromGenesis(lastPoint.timestamp)
       const projectionDays = 1000 // Project 1000 days into the future
       
-      const projectionPoints: Array<{timestamp: number, total: number, active: number}> = []
+      const projectionPoints: Array<{timestamp: number, total: number}> = []
       
       for (let i = 1; i <= projectionDays; i += 10) { // Every 10 days
         const futureDays = lastDays + i
@@ -156,14 +156,9 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
         // Total addresses projection using power law
         const projectedTotal = powerLawData.a * Math.pow(futureDays, powerLawData.b)
         
-        // Active addresses projection (estimate as percentage of total)
-        const currentActiveRatio = lastPoint.activeAddresses / lastPoint.value
-        const projectedActive = projectedTotal * Math.max(0.1, currentActiveRatio * 0.9) // Assume slight decline in activity ratio
-        
         projectionPoints.push({
           timestamp: futureTimestamp,
-          total: projectedTotal,
-          active: projectedActive
+          total: projectedTotal
         })
       }
       
@@ -179,13 +174,6 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
     if (filteredData.length === 0) return null
     return filteredData.reduce((max, point) => 
       point.value > max.value ? point : max
-    )
-  }, [filteredData])
-
-  const atlData = useMemo(() => {
-    if (filteredData.length === 0) return null
-    return filteredData.reduce((min, point) => 
-      point.value < min.value ? point : min
     )
   }, [filteredData])
 
@@ -226,33 +214,7 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
         hovertemplate: '<b>%{fullData.name}</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
       })
 
-      // Add total addresses projections
-      if (generateProjection) {
-        try {
-          let projectionX: (number | Date)[]
-          if (timeScale === 'Log') {
-            projectionX = generateProjection.map(p => getDaysFromGenesis(p.timestamp))
-          } else {
-            projectionX = generateProjection.map(p => new Date(p.timestamp))
-          }
-          
-          const projectionY = generateProjection.map(p => p.total)
-          
-          traces.push({
-            x: projectionX,
-            y: projectionY,
-            mode: 'lines',
-            type: 'scatter',
-            name: 'Total Projection (1000 days)',
-            line: { color: '#10B981', width: 2, dash: 'dot' },
-            connectgaps: true,
-            showlegend: true,
-            hovertemplate: '<b>Projected Total</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
-          })
-        } catch (error) {
-          console.error('Error creating projection trace:', error)
-        }
-      }
+      // Add power law if enabled and available
       if (powerLawData && powerLawData.a && powerLawData.b && isFinite(powerLawData.r2)) {
         try {
           const allDaysFromGenesis = validData.map(d => getDaysFromGenesis(d.timestamp))
@@ -294,6 +256,34 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
         }
       }
 
+      // Add total addresses projections
+      if (generateProjection) {
+        try {
+          let projectionX: (number | Date)[]
+          if (timeScale === 'Log') {
+            projectionX = generateProjection.map(p => getDaysFromGenesis(p.timestamp))
+          } else {
+            projectionX = generateProjection.map(p => new Date(p.timestamp))
+          }
+          
+          const projectionY = generateProjection.map(p => p.total)
+          
+          traces.push({
+            x: projectionX,
+            y: projectionY,
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Total Projection (1000 days)',
+            line: { color: '#10B981', width: 2, dash: 'dot' },
+            connectgaps: true,
+            showlegend: true,
+            hovertemplate: '<b>Projected Total</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
+          })
+        } catch (error) {
+          console.error('Error creating projection trace:', error)
+        }
+      }
+
       // Add ATH marker
       if (athData) {
         try {
@@ -332,7 +322,7 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
     }
 
     return traces
-  }, [filteredData, timeScale, addressScale, powerLawData, athData, validData])
+  }, [filteredData, timeScale, addressScale, powerLawData, generateProjection, athData, validData])
 
   // Plotly layout
   const plotlyLayout = useMemo(() => {
@@ -400,7 +390,7 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
   // Show error state if no valid data
   if (validData.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-center h-96 bg-[#0F0F1A] rounded-lg border border-gray-700">
           <div className="text-center">
             <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -417,60 +407,10 @@ export default function AddressChart({ data, height = 400 }: AddressChartProps) 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-2">
-          {/* Address Scale */}
-          <select 
-            value={addressScale} 
-            onChange={(e) => setAddressScale(e.target.value as 'Linear' | 'Log')}
-            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
-          >
-            <option value="Linear">Linear Scale</option>
-            <option value="Log">Log Scale</option>
-          </select>
-
-          {/* Time Scale */}
-          <select 
-            value={timeScale} 
-            onChange={(e) => setTimeScale(e.target.value as 'Linear' | 'Log')}
-            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
-          >
-            <option value="Linear">Linear Time</option>
-            <option value="Log">Log Time</option>
-          </select>
-
-          {/* Power Law */}
-          <select 
-            value={showPowerLaw} 
-            onChange={(e) => setShowPowerLaw(e.target.value as 'Hide' | 'Show')}
-            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
-          >
-            <option value="Hide">Hide Power Law</option>
-            <option value="Show">Show Power Law</option>
-          </select>
-
-          {/* Projections */}
-          <select 
-            value={showProjection} 
-            onChange={(e) => setShowProjection(e.target.value as 'Hide' | 'Show')}
-            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
-          >
-            <option value="Hide">Hide Projections</option>
-            <option value="Show">Show 1000-day Projection</option>
-          </select>
-        </div> Chart Type */}
-          <select 
-            value={chartType} 
-            onChange={(e) => setChartType(e.target.value as 'Total' | 'Active' | 'Both')}
-            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
-          >
-            <option value="Both">Both Charts</option>
-            <option value="Total">Total Addresses</option>
-            <option value="Active">Active Addresses</option>
-          </select>
-
           {/* Address Scale */}
           <select 
             value={addressScale} 
