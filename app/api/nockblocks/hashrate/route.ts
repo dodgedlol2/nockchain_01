@@ -96,26 +96,36 @@ export async function GET() {
 
     // Transform data to our format
     const hashrateData = proofRateData.data.map((point: any) => ({
-      timestamp: point.timestamp * 1000, // Convert to milliseconds
+      timestamp: (point.timestamp || 0) * 1000, // Convert to milliseconds
       value: point.adjusted_proofrate || point.proofrate || 0
-    })).filter((point: any) => point.value > 0) // Remove invalid data points
+    })).filter((point: any) => 
+      point.value > 0 && 
+      point.timestamp > 0 && 
+      !isNaN(point.value) && 
+      !isNaN(point.timestamp)
+    ) // Remove invalid data points
 
     console.log(`✅ Processed ${hashrateData.length} hashrate data points`)
+
+    // Ensure we have valid data
+    if (hashrateData.length === 0) {
+      throw new Error('No valid hashrate data points after filtering')
+    }
 
     // Cache the result
     cachedData = {
       hashrate: hashrateData,
       tip: {
-        height: tip.height,
-        timestamp: tip.timestamp,
-        difficulty: tip.difficulty,
-        proofsPerSecond: tip.proofsPerSecond
+        height: tip.height || 0,
+        timestamp: tip.timestamp || 0,
+        difficulty: tip.difficulty || 0,
+        proofsPerSecond: tip.proofsPerSecond || 0
       },
       metadata: {
         totalPoints: hashrateData.length,
         dateRange: {
-          start: hashrateData[0]?.timestamp,
-          end: hashrateData[hashrateData.length - 1]?.timestamp
+          start: hashrateData[0]?.timestamp || 0,
+          end: hashrateData[hashrateData.length - 1]?.timestamp || 0
         },
         currentHashrate: hashrateData[hashrateData.length - 1]?.value || 0
       }
