@@ -79,6 +79,7 @@ export default function HashrateChart({ data, height = 600 }: HashrateChartProps
   const [timeScale, setTimeScale] = useState<'Linear' | 'Log'>('Linear')
   const [timePeriod, setTimePeriod] = useState<'1M' | '3M' | '6M' | '1Y' | 'All'>('All')
   const [showPowerLaw, setShowPowerLaw] = useState<'Hide' | 'Show'>('Show')
+  const [showProjection, setShowProjection] = useState<'Hide' | 'Show'>('Show')
 
   // Filter data based on time period
   const filteredData = useMemo(() => {
@@ -291,7 +292,35 @@ export default function HashrateChart({ data, height = 600 }: HashrateChartProps
         xanchor: "left",
         x: 0,
         bgcolor: 'rgba(0,0,0,0)',
-        font: { size: 11 }
+        font: { size: 11         }
+      }
+
+      // Add hashrate projections
+      if (hashrateProjection) {
+        try {
+          let projectionX: (number | Date)[]
+          if (timeScale === 'Log') {
+            projectionX = hashrateProjection.map(p => getDaysFromGenesis(p.timestamp))
+          } else {
+            projectionX = hashrateProjection.map(p => new Date(p.timestamp))
+          }
+          
+          const projectionY = hashrateProjection.map(p => p.hashrate)
+          
+          traces.push({
+            x: projectionX,
+            y: projectionY,
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Hashrate Projection (1000 days)',
+            line: { color: '#5B6CFF', width: 2, dash: 'dot' },
+            connectgaps: true,
+            showlegend: true,
+            hovertemplate: '<b>Projected Hashrate</b><br>Rate: %{y}<br>Date: %{x}<extra></extra>',
+          })
+        } catch (error) {
+          console.error('Error creating hashrate projection trace:', error)
+        }
       }
     }
 
@@ -371,6 +400,16 @@ export default function HashrateChart({ data, height = 600 }: HashrateChartProps
           >
             <option value="Hide">Hide Power Law</option>
             <option value="Show">Show Power Law</option>
+          </select>
+
+          {/* Projections */}
+          <select 
+            value={showProjection} 
+            onChange={(e) => setShowProjection(e.target.value as 'Hide' | 'Show')}
+            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#5B6CFF] outline-none"
+          >
+            <option value="Hide">Hide Projections</option>
+            <option value="Show">Show 1000-day Projection</option>
           </select>
         </div>
 
