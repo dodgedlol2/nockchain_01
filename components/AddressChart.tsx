@@ -103,6 +103,8 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
   const [timeScale, setTimeScale] = useState<'Linear' | 'Log'>('Linear')
   const [timePeriod, setTimePeriod] = useState<'1M' | '3M' | '6M' | '1Y' | 'All'>('All')
   const [showPowerLaw, setShowPowerLaw] = useState<'Hide' | 'Show'>('Show')
+  const [showProjection, setShowProjection] = useState<'Hide' | 'Show'>('Show')
+  const [chartType, setChartType] = useState<'Total' | 'Active' | 'Both'>('Both')
 
   // Validate and filter data
   const validData = useMemo(() => {
@@ -136,6 +138,42 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
     
     return fitPowerLaw(validData)
   }, [validData, showPowerLaw])
+
+  // Generate future projection data
+  const generateProjection = useMemo(() => {
+    if (showProjection === 'Hide' || !powerLawData || validData.length < 10) return null
+    
+    try {
+      const lastPoint = validData[validData.length - 1]
+      const lastDays = getDaysFromGenesis(lastPoint.timestamp)
+      const projectionDays = 1000 // Project 1000 days into the future
+      
+      const projectionPoints: Array<{timestamp: number, total: number, active: number}> = []
+      
+      for (let i = 1; i <= projectionDays; i += 10) { // Every 10 days
+        const futureDays = lastDays + i
+        const futureTimestamp = lastPoint.timestamp + (i * 24 * 60 * 60 * 1000)
+        
+        // Total addresses projection using power law
+        const projectedTotal = powerLawData.a * Math.pow(futureDays, powerLawData.b)
+        
+        // Active addresses projection (estimate as percentage of total)
+        const currentActiveRatio = lastPoint.activeAddresses / lastPoint.value
+        const projectedActive = projectedTotal * Math.max(0.1, currentActiveRatio * 0.9) // Assume slight decline in activity ratio
+        
+        projectionPoints.push({
+          timestamp: futureTimestamp,
+          total: projectedTotal,
+          active: projectedActive
+        })
+      }
+      
+      return projectionPoints
+    } catch (error) {
+      console.error('Projection calculation failed:', error)
+      return null
+    }
+  }, [validData, powerLawData, showProjection])
 
   // Calculate ATH and ATL
   const athData = useMemo(() => {
@@ -175,21 +213,95 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
         return []
       }
 
-      // Main address growth trace
-      traces.push({
-        x: xValues,
-        y: yValues,
-        mode: 'lines',
-        type: 'scatter',
-        name: 'Total Addresses',
-        line: { color: '#10B981', width: 2 },
-        fill: 'tozeroy',
-        fillcolor: 'rgba(16, 185, 129, 0.2)',
-        connectgaps: true,
-        hovertemplate: '<b>%{fullData.name}</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
-      })
+      // Main address growth traces
+      if (chartType === 'Total' || chartType === 'Both') {
+        traces.push({
+          x: xValues,
+          y: yValues,
+          mode: 'lines',
+          type: 'scatter',
+          name: 'Total Addresses',
+          line: { color: '#10B981', width: 2 },
+          fill: chartType === 'Total' ? 'tozeroy' : 'none',
+          fillcolor: 'rgba(16, 185, 129, 0.2)',
+          connectgaps: true,
+          hovertemplate: '<b>%{fullData.name}</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
+        })
+      }
 
-      // Add power law if enabled and available
+      // Active addresses trace
+      if (chartType === 'Active' || chartType === 'Both') {
+        const activeValues = filteredData.map(d => d.activeAddresses || 0)
+        
+        traces.push({
+          x: xValues,
+          y: activeValues,
+          mode: 'lines',
+          type: 'scatter',
+          name: 'Active Addresses',
+          line: { color: '#F59E0B', width: 2 },
+          fill: chartType === 'Active' ? 'tozeroy' : 'none',
+          fillcolor: 'rgba(245, 158, 11, 0.2)',
+          connectgaps: true,
+          hovertemplate: '<b>%{fullData.name}</b><br>Active: %{y}<br>Date: %{x}<extra></extra>',
+        })
+      }
+
+      // Add future projections
+      if (generateProjection && (chartType === 'Total' || chartType === 'Both')) {
+        try {
+          let projectionX: (number | Date)[]
+          if (timeScale === 'Log') {
+            projectionX = generateProjection.map(p => getDaysFromGenesis(p.timestamp))
+          } else {
+            projectionX = generateProjection.map(p => new Date(p.timestamp))
+          }
+          
+          const projectionY = generateProjection.map(p => p.total)
+          
+          traces.push({
+            x: projectionX,
+            y: projectionY,
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Total Projection (1000 days)',
+            line: { color: '#10B981', width: 2, dash: 'dot' },
+            connectgaps: true,
+            showlegend: true,
+            hovertemplate: '<b>Projected Total</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
+          })
+        } catch (error) {
+          console.error('Error creating projection trace:', error)
+        }
+      }
+
+      // Add active addresses projections
+      if (generateProjection && (chartType === 'Active' || chartType === 'Both')) {
+        try {
+          let projectionX: (number | Date)[]
+          if (timeScale === 'Log') {
+            projectionX = generateProjection.map(p => getDaysFromGenesis(p.timestamp))
+          } else {
+            projectionX = generateProjection.map(p => new Date(p.timestamp))
+          }
+          
+          const activeProjectionY = generateProjection.map(p => p.active)
+          
+          traces.push({
+            x: projectionX,
+            y: activeProjectionY,
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Active Projection (1000 days)',
+            line: { color: '#F59E0B', width: 2, dash: 'dot' },
+            connectgaps: true,
+            showlegend: true,
+            hovertemplate: '<b>Projected Active</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
+          })
+        } catch (error) {
+          console.error('Error creating active projection trace:', error)
+        }
+      }
       if (powerLawData && powerLawData.a && powerLawData.b && isFinite(powerLawData.r2)) {
         try {
           const allDaysFromGenesis = validData.map(d => getDaysFromGenesis(d.timestamp))
@@ -358,6 +470,17 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
       {/* Controls */}
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-2">
+          {/* Chart Type */}
+          <select 
+            value={chartType} 
+            onChange={(e) => setChartType(e.target.value as 'Total' | 'Active' | 'Both')}
+            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
+          >
+            <option value="Both">Both Charts</option>
+            <option value="Total">Total Addresses</option>
+            <option value="Active">Active Addresses</option>
+          </select>
+
           {/* Address Scale */}
           <select 
             value={addressScale} 
@@ -386,6 +509,16 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
           >
             <option value="Hide">Hide Power Law</option>
             <option value="Show">Show Power Law</option>
+          </select>
+
+          {/* Projections */}
+          <select 
+            value={showProjection} 
+            onChange={(e) => setShowProjection(e.target.value as 'Hide' | 'Show')}
+            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
+          >
+            <option value="Hide">Hide Projections</option>
+            <option value="Show">Show 1000-day Projection</option>
           </select>
         </div>
 
@@ -426,7 +559,8 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
       <div className="text-sm text-gray-400 text-center">
         <p>
           Showing {filteredData.length.toLocaleString()} of {validData.length.toLocaleString()} data points
-          {powerLawData && ` | Address Growth Power Law R² = ${powerLawData.r2.toFixed(3)}`}
+          {powerLawData && ` | Power Law R² = ${powerLawData.r2.toFixed(3)}`}
+          {generateProjection && showProjection === 'Show' && ` | 1000-day projection enabled`}
         </p>
       </div>
     </div>
