@@ -98,13 +98,12 @@ function fitPowerLaw(data: AddressMetric[]) {
   }
 }
 
-export default function AddressChart({ data, height = 600 }: AddressChartProps) {
+export default function AddressChart({ data, height = 400 }: AddressChartProps) {
   const [addressScale, setAddressScale] = useState<'Linear' | 'Log'>('Log')
   const [timeScale, setTimeScale] = useState<'Linear' | 'Log'>('Linear')
   const [timePeriod, setTimePeriod] = useState<'1M' | '3M' | '6M' | '1Y' | 'All'>('All')
   const [showPowerLaw, setShowPowerLaw] = useState<'Hide' | 'Show'>('Show')
   const [showProjection, setShowProjection] = useState<'Hide' | 'Show'>('Show')
-  const [chartType, setChartType] = useState<'Total' | 'Active' | 'Both'>('Both')
 
   // Validate and filter data
   const validData = useMemo(() => {
@@ -213,42 +212,22 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
         return []
       }
 
-      // Main address growth traces
-      if (chartType === 'Total' || chartType === 'Both') {
-        traces.push({
-          x: xValues,
-          y: yValues,
-          mode: 'lines',
-          type: 'scatter',
-          name: 'Total Addresses',
-          line: { color: '#10B981', width: 2 },
-          fill: chartType === 'Total' ? 'tozeroy' : 'none',
-          fillcolor: 'rgba(16, 185, 129, 0.2)',
-          connectgaps: true,
-          hovertemplate: '<b>%{fullData.name}</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
-        })
-      }
+      // Main total addresses trace
+      traces.push({
+        x: xValues,
+        y: yValues,
+        mode: 'lines',
+        type: 'scatter',
+        name: 'Total Addresses',
+        line: { color: '#10B981', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(16, 185, 129, 0.2)',
+        connectgaps: true,
+        hovertemplate: '<b>%{fullData.name}</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
+      })
 
-      // Active addresses trace
-      if (chartType === 'Active' || chartType === 'Both') {
-        const activeValues = filteredData.map(d => d.activeAddresses || 0)
-        
-        traces.push({
-          x: xValues,
-          y: activeValues,
-          mode: 'lines',
-          type: 'scatter',
-          name: 'Active Addresses',
-          line: { color: '#F59E0B', width: 2 },
-          fill: chartType === 'Active' ? 'tozeroy' : 'none',
-          fillcolor: 'rgba(245, 158, 11, 0.2)',
-          connectgaps: true,
-          hovertemplate: '<b>%{fullData.name}</b><br>Active: %{y}<br>Date: %{x}<extra></extra>',
-        })
-      }
-
-      // Add future projections
-      if (generateProjection && (chartType === 'Total' || chartType === 'Both')) {
+      // Add total addresses projections
+      if (generateProjection) {
         try {
           let projectionX: (number | Date)[]
           if (timeScale === 'Log') {
@@ -272,34 +251,6 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
           })
         } catch (error) {
           console.error('Error creating projection trace:', error)
-        }
-      }
-
-      // Add active addresses projections
-      if (generateProjection && (chartType === 'Active' || chartType === 'Both')) {
-        try {
-          let projectionX: (number | Date)[]
-          if (timeScale === 'Log') {
-            projectionX = generateProjection.map(p => getDaysFromGenesis(p.timestamp))
-          } else {
-            projectionX = generateProjection.map(p => new Date(p.timestamp))
-          }
-          
-          const activeProjectionY = generateProjection.map(p => p.active)
-          
-          traces.push({
-            x: projectionX,
-            y: activeProjectionY,
-            mode: 'lines',
-            type: 'scatter',
-            name: 'Active Projection (1000 days)',
-            line: { color: '#F59E0B', width: 2, dash: 'dot' },
-            connectgaps: true,
-            showlegend: true,
-            hovertemplate: '<b>Projected Active</b><br>Addresses: %{y}<br>Date: %{x}<extra></extra>',
-          })
-        } catch (error) {
-          console.error('Error creating active projection trace:', error)
         }
       }
       if (powerLawData && powerLawData.a && powerLawData.b && isFinite(powerLawData.r2)) {
@@ -470,7 +421,46 @@ export default function AddressChart({ data, height = 600 }: AddressChartProps) 
       {/* Controls */}
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-2">
-          {/* Chart Type */}
+          {/* Address Scale */}
+          <select 
+            value={addressScale} 
+            onChange={(e) => setAddressScale(e.target.value as 'Linear' | 'Log')}
+            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
+          >
+            <option value="Linear">Linear Scale</option>
+            <option value="Log">Log Scale</option>
+          </select>
+
+          {/* Time Scale */}
+          <select 
+            value={timeScale} 
+            onChange={(e) => setTimeScale(e.target.value as 'Linear' | 'Log')}
+            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
+          >
+            <option value="Linear">Linear Time</option>
+            <option value="Log">Log Time</option>
+          </select>
+
+          {/* Power Law */}
+          <select 
+            value={showPowerLaw} 
+            onChange={(e) => setShowPowerLaw(e.target.value as 'Hide' | 'Show')}
+            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
+          >
+            <option value="Hide">Hide Power Law</option>
+            <option value="Show">Show Power Law</option>
+          </select>
+
+          {/* Projections */}
+          <select 
+            value={showProjection} 
+            onChange={(e) => setShowProjection(e.target.value as 'Hide' | 'Show')}
+            className="bg-[#1A1A2E] text-white px-3 py-1.5 rounded-md text-sm border border-gray-600 focus:border-[#10B981] outline-none"
+          >
+            <option value="Hide">Hide Projections</option>
+            <option value="Show">Show 1000-day Projection</option>
+          </select>
+        </div> Chart Type */}
           <select 
             value={chartType} 
             onChange={(e) => setChartType(e.target.value as 'Total' | 'Active' | 'Both')}
