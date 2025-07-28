@@ -15,8 +15,8 @@ interface HashrateChartProps {
   height?: number
 }
 
-// Genesis date for NockChain
-const GENESIS_DATE = new Date('2021-11-07T00:00:00.000Z').getTime()
+// Genesis date for NockChain - May 21, 2025
+const GENESIS_DATE = new Date('2025-05-21T00:00:00.000Z').getTime()
 
 function getDaysFromGenesis(timestamp: number): number {
   return Math.max(1, Math.floor((timestamp - GENESIS_DATE) / (24 * 60 * 60 * 1000)) + 1)
