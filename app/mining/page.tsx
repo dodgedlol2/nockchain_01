@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import AddressChart from '@/components/AddressChart'
-import ActiveAddressChart from '@/components/ActiveAddressChart'
 
 interface AddressMetric {
   timestamp: number
@@ -214,35 +213,21 @@ export default function MiningPage() {
         </div>
       </div>
 
-      {/* Main Charts */}
-      <div className="space-y-6">
-        {/* Total Addresses Chart */}
-        <div className="bg-[#1A1A2E] p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Total Address Growth</h2>
-            <button 
-              onClick={loadData}
-              className="px-3 py-1.5 bg-[#2A2A3E] text-white rounded-md text-sm hover:bg-[#3A3A4E] transition-colors flex items-center space-x-2"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
-              </svg>
-              <span>Refresh</span>
-            </button>
-          </div>
-          <AddressChart data={data.addresses} height={400} />
+      {/* Main Chart */}
+      <div className="bg-[#1A1A2E] p-6 rounded-lg border border-gray-700">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-white">Address Growth Chart</h2>
+          <button 
+            onClick={loadData}
+            className="px-3 py-1.5 bg-[#2A2A3E] text-white rounded-md text-sm hover:bg-[#3A3A4E] transition-colors flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
+            </svg>
+            <span>Refresh</span>
+          </button>
         </div>
-
-        {/* Active Addresses Chart */}
-        <div className="bg-[#1A1A2E] p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Active Address Trends</h2>
-            <div className="text-sm text-gray-400">
-              Addresses with recent transaction activity
-            </div>
-          </div>
-          <ActiveAddressChart data={data.addresses} height={400} />
-        </div>
+        <AddressChart data={data.addresses} height={600} />
       </div>
 
       {/* Network Info */}
@@ -284,19 +269,19 @@ export default function MiningPage() {
             </li>
             <li className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-[#F59E0B] rounded-full"></div>
-              <span>Active addresses with recent transaction activity</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-[#DC2626] rounded-full"></div>
-              <span>Separate power law analysis for both metrics</span>
+              <span>Power law growth analysis with R² correlation</span>
             </li>
             <li className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-white rounded-full"></div>
               <span>Peak adoption period markers</span>
             </li>
             <li className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+              <span>Linear and logarithmic scale options</span>
+            </li>
+            <li className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <span>1000-day projections for both address types</span>
+              <span>Real-time data from NockChain network</span>
             </li>
           </ul>
         </div>
